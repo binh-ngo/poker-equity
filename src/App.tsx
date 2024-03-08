@@ -2,6 +2,10 @@ import React, { useState } from 'react';
 import { Card, Deck, Player } from './types';
 import './output.css'
 
+interface CardObj {
+  true: string;
+  reverse: string;
+}
 function App() {
   const [playerNames, setPlayerNames] = useState<string[]>(['Player 1', 'Player 2']);
   const [players, setPlayers] = useState<Player[]>([]);
@@ -50,7 +54,6 @@ function App() {
       'K': 13,
       'A': 15
     };
-    console.log(player)
     const hand = player.getHand();
     let constant = 20;
   
@@ -62,8 +65,12 @@ function App() {
         constant = 44;
       }
   
-      return higher * 2 + lower + constant;
+      if (hand[0].suit == hand[1].suit) {
+        return higher * 2 + lower + constant + 2;
+    } else {
+        return higher * 2 + lower + constant;
     }
+  }
   
     // Return a default value if the hand doesn't contain exactly 2 cards
     return 0;
@@ -74,38 +81,42 @@ function App() {
     const individualCards = hand.split("");
 
     const rankValues: { [key: string]: number } = {
-      '2': 2,
-      '3': 3,
-      '4': 4,
-      '5': 5,
-      '6': 6,
-      '7': 7,
-      '8': 8,
-      '9': 9,
-      'T': 10,
-      'J': 11,
-      'Q': 12,
-      'K': 13,
-      'A': 15
+        '2': 2,
+        '3': 3,
+        '4': 4,
+        '5': 5,
+        '6': 6,
+        '7': 7,
+        '8': 8,
+        '9': 9,
+        'T': 10,
+        'J': 11,
+        'Q': 12,
+        'K': 13,
+        'A': 15
     };
 
     let constant = 20;
-  
+
     if (individualCards.length === 2) {
-      const higher = Math.max(rankValues[individualCards[0]], rankValues[individualCards[1]]);
-      const lower = Math.min(rankValues[individualCards[0]], rankValues[individualCards[1]]);
-  
-      if (individualCards[0] === individualCards[1]) {
-        constant = 44;
-      }
-  
-      return higher * 2 + lower + constant;
+        const higher = Math.max(rankValues[individualCards[0]], rankValues[individualCards[1]]);
+        const lower = Math.min(rankValues[individualCards[0]], rankValues[individualCards[1]]);
+
+        if (individualCards[0] === individualCards[1]) {
+            constant = 44;
+        }
+        if (individualCards[1] === 's') {
+            return higher * 2 + lower + constant + 2;
+        } else {
+            return higher * 2 + lower + constant;
+        }
     }
-  
+
     // Return a default value if the hand doesn't contain exactly 2 cards
     return 0;
-  };
-  
+};
+
+
 
 const generateGrid = (): string[][] => {
   const grid: string[][] = [];
@@ -130,9 +141,56 @@ const generateGrid = (): string[][] => {
   const grid = generateGrid();
 
   const compareHandEquity = (cards: string) => {
-    if(calculatePreflopEquity(players[0]) > calculateAllPreflopEquity(cards)) {
+    if (gameStarted) {
+      return calculatePreflopEquity(players[0]) > calculateAllPreflopEquity(cards);
+    }
+    return false;
+  };
+
+  const equateHandOrder = (cards: string) => {
+    let cardObj: CardObj = {
+      true: '',
+      reverse: ''
+    }  
+    if (cards) {
+        // Check if the current cell matches the user's hand in both orders
+        const reverseCards = cards.length === 3 ? cards[1] + cards[0] + cards[2] : cards;
+        if (cards === cards || cards === reverseCards) {
+          cardObj.true = cards;
+          cardObj.reverse = reverseCards;
+          return cardObj;
+        }
+      }
+      return cardObj;
+    }
+
+  const isSuited = (cards: string) => {
+    if(cards.includes('s')) {
       return true;
     }
+  }
+
+  const userHand = () => {
+    if(gameStarted) {
+      const currentHand = players[0].getHand();
+      var simplifiedHand = currentHand[0].rank + currentHand[1].rank;
+      if(currentHand[0].suit === currentHand[1].suit) {
+        simplifiedHand += 's';
+      } 
+      else if(currentHand[0].rank === currentHand[1].rank) {
+        simplifiedHand += '';
+      }
+      else {
+        simplifiedHand += 'o';
+      }
+      const finalHand: CardObj = equateHandOrder(simplifiedHand);
+      if(finalHand) {
+        console.log(finalHand.true)
+      }
+      console.log(finalHand)
+      return finalHand;
+    }
+    return null;
   }
 
   return (
@@ -176,10 +234,11 @@ const generateGrid = (): string[][] => {
                 <tr key={rowIndex}>
                   {row.map((cell, cellIndex) => (
                     <td key={cellIndex} className={`border border-black px-3 text-center hover:bg-blue-200 ${cell.length === 2 && cell[0] === cell[1] ? 'bg-yellow-200' : ''} 
-                    ${compareHandEquity(cell) ? 'bg-green-200' : ''}`}>
+                    ${compareHandEquity(cell) ? 'bg-green-200' : ''}
+                    ${userHand()?.reverse === cell || userHand()?.true === cell ? 'bg-orange-600' : ''}`}>
                           {cell}
                       <br />
-                      {calculateAllPreflopEquity(`${cell[0]}${cell[1]}`)}%
+                      {isSuited(cell) ? calculateAllPreflopEquity(`${cell[0]}${cell[1]}`) + 2 : calculateAllPreflopEquity(`${cell[0]}${cell[1]}`)}%
                     </td>                    
                     ))}
                 </tr>
